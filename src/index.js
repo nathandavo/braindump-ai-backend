@@ -14,7 +14,7 @@ app.get('/players', async (req, res) => {
 
   try {
     let all = [];
-    const leagues = [39,140,78,135,61,88];
+    const leagues = [39]; // Premier League only
     for (const league of leagues) {
       for (let page = 1; page <= 12; page++) {
         const { data } = await axios.get('https://v3.football.api-sports.io/players', {

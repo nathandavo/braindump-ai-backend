@@ -9,14 +9,15 @@ const KEY = process.env.API_FOOTBALL_KEY;
 let cache = null;
 let last = 0;
 
+// GET all-time Premier League players
 app.get('/players', async (req, res) => {
-  // Return cached data if less than 24h old
+  // Return cached data if <24h old
   if (cache && Date.now() - last < 86400000) return res.json(cache);
 
   try {
-    let allPlayers = {};
     const league = 39; // Premier League
-    const seasons = Array.from({ length: 18 }, (_, i) => 2024 - i); // last 18 seasons (2006-2024)
+    const seasons = Array.from({ length: 30 }, (_, i) => 2024 - i); // last 30 seasons
+    let allPlayers = {};
 
     for (const season of seasons) {
       let page = 1;
@@ -45,19 +46,19 @@ app.get('/players', async (req, res) => {
           allPlayers[id].appearances += appearances;
         }
 
-        // Stop if last page
-        if (players.length < 20) break;
+        if (players.length < 20) break; // last page
         page++;
       }
     }
 
+    // Convert object to array and filter players with 0 appearances
     cache = Object.values(allPlayers).filter(p => p.appearances > 0);
     last = Date.now();
 
     res.json(cache);
 
   } catch (e) {
-    console.log("API ERROR:", e.response?.data || e.message);
+    console.log('API ERROR:', e.response?.data || e.message);
     res.status(500).json({ error: 'API failed' });
   }
 });

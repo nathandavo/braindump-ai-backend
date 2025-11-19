@@ -10,7 +10,7 @@ let cache = null;
 let last = 0;
 
 app.get('/players', async (req, res) => {
-  // Serve cached data if less than 24h old
+  // Return cached data if less than 24h old
   if (cache && Date.now() - last < 86400000) return res.json(cache);
 
   try {
@@ -31,18 +31,18 @@ app.get('/players', async (req, res) => {
 
         for (const p of players) {
           const id = p.player.id;
-          const goals = p.statistics[0]?.goals?.total || 0;
+          const appearances = p.statistics[0]?.games?.appearences || 0;
 
           if (!allPlayers[id]) {
             allPlayers[id] = {
               id,
               name: p.player.name,
               photo: p.player.photo,
-              goals: 0
+              appearances: 0
             };
           }
 
-          allPlayers[id].goals += goals;
+          allPlayers[id].appearances += appearances;
         }
 
         // Stop if last page
@@ -51,7 +51,7 @@ app.get('/players', async (req, res) => {
       }
     }
 
-    cache = Object.values(allPlayers).filter(p => p.goals > 0);
+    cache = Object.values(allPlayers).filter(p => p.appearances > 0);
     last = Date.now();
 
     res.json(cache);

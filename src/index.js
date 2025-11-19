@@ -10,34 +10,55 @@ let cache = null;
 let last = 0;
 
 app.get('/players', async (req, res) => {
+  // Serve cached data if less than 24h old
   if (cache && Date.now() - last < 86400000) return res.json(cache);
 
   try {
-    let all = [];
-    const leagues = [39]; // Premier League only
-    for (const league of leagues) {
-      for (let page = 1; page <= 12; page++) {
+    let allPlayers = {};
+    const league = 39; // Premier League
+    const seasons = Array.from({ length: 18 }, (_, i) => 2024 - i); // last 18 seasons (2006-2024)
+
+    for (const season of seasons) {
+      let page = 1;
+      while (true) {
         const { data } = await axios.get('https://v3.football.api-sports.io/players', {
-          params: { league, season: 2024, page },
+          params: { league, season, page },
           headers: { 'x-apisports-key': KEY }
         });
-        const formatted = data.response
-          .map(p => ({
-            id: p.player.id,
-            name: p.player.name,
-            photo: p.player.photo,
-            goals: p.statistics[0]?.goals?.total || 0
-          }))
-          .filter(p => p.goals > 0);
-        all.push(...formatted);
-        if (formatted.length < 20) break;
+
+        const players = data.response;
+        if (!players || players.length === 0) break;
+
+        for (const p of players) {
+          const id = p.player.id;
+          const goals = p.statistics[0]?.goals?.total || 0;
+
+          if (!allPlayers[id]) {
+            allPlayers[id] = {
+              id,
+              name: p.player.name,
+              photo: p.player.photo,
+              goals: 0
+            };
+          }
+
+          allPlayers[id].goals += goals;
+        }
+
+        // Stop if last page
+        if (players.length < 20) break;
+        page++;
       }
     }
-    cache = all.filter((v,i,a) => a.findIndex(x => x.id === v.id) === i);
+
+    cache = Object.values(allPlayers).filter(p => p.goals > 0);
     last = Date.now();
+
     res.json(cache);
+
   } catch (e) {
-    res.status(500).json({error: 'API failed'});
+    console.log("API ERROR:", e.response?.data || e.message);
+    res.status(500).json({ error: 'API failed' });
   }
 });
 

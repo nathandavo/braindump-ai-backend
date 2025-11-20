@@ -9,13 +9,13 @@ const KEY = process.env.API_FOOTBALL_KEY;
 let cache = null;
 let last = 0;
 
-// GET players with summed stats across multiple seasons
+// GET players with summed appearances from 2010 to 2025
 app.get('/players', async (req, res) => {
   if (cache && Date.now() - last < 86400000) return res.json(cache); // 24h cache
 
   try {
     const league = 39; // Premier League
-    const seasons = [2024, 2023, 2022, 2021, 2020, 2019, 2018, 2017, 2016, 2015, 2010, 2009]; // adjust as needed
+    const seasons = Array.from({ length: 16 }, (_, i) => 2025 - i); // 2025 down to 2010
     let allPlayers = {};
 
     for (const season of seasons) {
@@ -32,20 +32,17 @@ app.get('/players', async (req, res) => {
         for (const p of players) {
           const id = p.player.id;
           const appearances = p.statistics[0]?.games?.appearences || 0;
-          const goals = p.statistics[0]?.goals?.total || 0;
 
           if (!allPlayers[id]) {
             allPlayers[id] = {
               id,
               name: p.player.name,
               photo: p.player.photo,
-              appearances: 0,
-              goals: 0
+              appearances: 0
             };
           }
 
           allPlayers[id].appearances += appearances;
-          allPlayers[id].goals += goals;
         }
 
         if (players.length < 20) break; // last page

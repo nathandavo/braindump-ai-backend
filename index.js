@@ -5,20 +5,25 @@ const cors = require('cors');
 const app = express();
 app.use(cors());
 
-const KEY = process.env.API_FOOTBALL_KEY; // your API key
+const KEY = process.env.API_FOOTBALL_KEY; // <-- your API key
 let cache = null;
 let last = 0;
 
-// GET all-time Premier League appearances (2010-2025)
+// GET all-time Premier League appearances across all seasons
 app.get('/players', async (req, res) => {
-  if (cache && Date.now() - last < 86400000) return res.json(cache); // cache 24h
-
   try {
+    // Return cache if still valid (24h)
+    if (cache && Date.now() - last < 86400000) return res.json(cache);
+
     const league = 39; // Premier League
-    const seasons = Array.from({ length: 16 }, (_, i) => 2025 - i); // 2025 → 2010
     let allPlayers = {};
 
+    // API-Football supports seasons typically from 2000+
+    // Looping from 2025 down to 2000 to cover "all-time" in API coverage
+    const seasons = Array.from({ length: 26 }, (_, i) => 2025 - i); // 2025 → 2000
+
     for (const season of seasons) {
+      console.log(`Fetching season ${season}...`);
       let page = 1;
 
       while (true) {
@@ -43,21 +48,25 @@ app.get('/players', async (req, res) => {
             allPlayers[id] = { id, name: p.player.name, appearances: 0 };
           }
 
-          allPlayers[id].appearances += appearances; // accumulate
+          // Accumulate appearances for all seasons
+          allPlayers[id].appearances += appearances;
         }
 
-        if (players.length < 20) break; // last page
+        // Break if this is the last page
+        if (players.length < 20) break;
         page++;
       }
     }
 
+    // Convert object to array and filter players with >0 appearances
     cache = Object.values(allPlayers).filter(p => p.appearances > 0);
     last = Date.now();
 
+    console.log(`Total players fetched: ${cache.length}`);
     res.json(cache);
 
-  } catch (e) {
-    console.log('API ERROR:', e.response?.data || e.message);
+  } catch (err) {
+    console.log('API ERROR:', err.response?.data || err.message);
     res.status(500).json({ error: 'API failed' });
   }
 });

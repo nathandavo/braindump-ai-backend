@@ -5,20 +5,18 @@ const cors = require('cors');
 const app = express();
 app.use(cors());
 
-const KEY = process.env.API_FOOTBALL_KEY;
+const KEY = process.env.API_FOOTBALL_KEY; // your API key
 let cache = null;
 let last = 0;
 
-// GET all-time Premier League appearances across all available seasons
+// GET all-time Premier League appearances (2010-2025)
 app.get('/players', async (req, res) => {
   if (cache && Date.now() - last < 86400000) return res.json(cache); // cache 24h
 
   try {
     const league = 39; // Premier League
-    let allPlayers = {};
-
-    // API-Football does not provide a "list of seasons", so we loop from 2025 down to 2000 (or earlier)
     const seasons = Array.from({ length: 16 }, (_, i) => 2025 - i); // 2025 → 2010
+    let allPlayers = {};
 
     for (const season of seasons) {
       let page = 1;
@@ -45,7 +43,7 @@ app.get('/players', async (req, res) => {
             allPlayers[id] = { id, name: p.player.name, appearances: 0 };
           }
 
-          allPlayers[id].appearances += appearances;
+          allPlayers[id].appearances += appearances; // accumulate
         }
 
         if (players.length < 20) break; // last page

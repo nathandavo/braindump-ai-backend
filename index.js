@@ -1,75 +1,87 @@
-const express = require('express');
-const axios = require('axios');
-const cors = require('cors');
+const express = require("express");
+const axios = require("axios");
+const cors = require("cors");
 
 const app = express();
 app.use(cors());
 
-const KEY = process.env.API_FOOTBALL_KEY; // <-- your API key
+const KEY = process.env.API_FOOTBALL_KEY;
+
 let cache = null;
 let last = 0;
 
-// GET all-time Premier League appearances across all seasons
-app.get('/players', async (req, res) => {
+app.get("/players", async (req, res) => {
   try {
-    // Return cache if still valid (24h)
     if (cache && Date.now() - last < 86400000) return res.json(cache);
 
     const league = 39; // Premier League
-    let allPlayers = {};
+    const seasons = [
+      2010, 2011, 2012, 2013, 2014, 2015, 2016,
+      2017, 2018, 2019, 2020, 2021, 2022, 2023, 2024
+    ];
 
-    // API-Football supports seasons typically from 2000+
-    // Looping from 2025 down to 2000 to cover "all-time" in API coverage
-    const seasons = Array.from({ length: 26 }, (_, i) => 2025 - i); // 2025 → 2000
+    // Premier League teams (API FOOTBALL IDs)
+    const teams = [
+      33, 34, 35, 36, 37, 38, 39, 40, 41, 42,
+      45, 46, 47, 48, 49, 50, 51, 52, 55, 57
+    ];
+
+    let players = {};
 
     for (const season of seasons) {
-      console.log(`Fetching season ${season}...`);
-      let page = 1;
+      console.log("Fetching squads for season:", season);
 
-      while (true) {
-        const { data } = await axios.get('https://v3.football.api-sports.io/players', {
-          params: { league, season, page },
-          headers: { 'x-apisports-key': KEY }
-        });
+      for (const team of teams) {
+        // 1) Get full squad
+        const squadRes = await axios.get(
+          "https://v3.football.api-sports.io/players/squads",
+          {
+            params: { team },
+            headers: { "x-apisports-key": KEY }
+          }
+        );
 
-        const players = data.response;
-        if (!players || players.length === 0) break;
+        const squad = squadRes.data.response[0]?.players || [];
+        for (const pl of squad) {
+          const id = pl.id;
 
-        for (const p of players) {
-          const id = p.player.id;
+          if (!players[id]) {
+            players[id] = {
+              id,
+              name: pl.name,
+              appearances: 0
+            };
+          }
 
-          // Sum appearances across all teams in this season
-          const appearances = p.statistics.reduce(
+          // 2) Get player's stats for this season
+          const statsRes = await axios.get(
+            "https://v3.football.api-sports.io/players",
+            {
+              params: { id, season, league },
+              headers: { "x-apisports-key": KEY }
+            }
+          );
+
+          const stats = statsRes.data.response[0]?.statistics || [];
+          const apps = stats.reduce(
             (sum, s) => sum + (s.games.appearences || 0),
             0
           );
 
-          if (!allPlayers[id]) {
-            allPlayers[id] = { id, name: p.player.name, appearances: 0 };
-          }
-
-          // Accumulate appearances for all seasons
-          allPlayers[id].appearances += appearances;
+          players[id].appearances += apps;
         }
-
-        // Break if this is the last page
-        if (players.length < 20) break;
-        page++;
       }
     }
 
-    // Convert object to array and filter players with >0 appearances
-    cache = Object.values(allPlayers).filter(p => p.appearances > 0);
+    cache = Object.values(players).filter(p => p.appearances > 0);
     last = Date.now();
 
-    console.log(`Total players fetched: ${cache.length}`);
     res.json(cache);
-
   } catch (err) {
-    console.log('API ERROR:', err.response?.data || err.message);
-    res.status(500).json({ error: 'API failed' });
+    console.error(err.response?.data || err);
+    res.status(500).json({ error: "API failed" });
   }
 });
 
 const port = process.env.PORT || 3000;
-app.listen(port, () => console.log('API ready'));
+app.listen(port, () => console.log("API ready"));

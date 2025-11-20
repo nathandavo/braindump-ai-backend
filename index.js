@@ -75,7 +75,7 @@ function addGoalsAssists(store, player) {
 /* -------------------------------
     1) MAN CITY – APPEARANCES
 --------------------------------*/
-app.get("pl/man-city/appearances", async (req, res) => {
+app.get("/pl/man-city/appearances", async (req, res) => {
   try {
     let results = {};
 
@@ -97,7 +97,7 @@ app.get("pl/man-city/appearances", async (req, res) => {
 /* -------------------------------
     2) MAN CITY – GOALS + ASSISTS
 --------------------------------*/
-app.get("pl/man-city/goals-assists", async (req, res) => {
+app.get("/pl/man-city/goals-assists", async (req, res) => {
   try {
     let results = {};
 
@@ -119,7 +119,7 @@ app.get("pl/man-city/goals-assists", async (req, res) => {
 /* -------------------------------
     3) LIVERPOOL – APPEARANCES
 --------------------------------*/
-app.get("pl/liverpool/appearances", async (req, res) => {
+app.get("/pl/liverpool/appearances", async (req, res) => {
   try {
     let results = {};
 
@@ -141,7 +141,7 @@ app.get("pl/liverpool/appearances", async (req, res) => {
 /* -------------------------------
     4) LIVERPOOL – GOALS + ASSISTS
 --------------------------------*/
-app.get("pl/liverpool/goals-assists", async (req, res) => {
+app.get("/pl/liverpool/goals-assists", async (req, res) => {
   try {
     let results = {};
 
